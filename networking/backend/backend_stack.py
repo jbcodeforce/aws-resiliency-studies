@@ -10,8 +10,7 @@ with open("./backend/user_data/user_data.sh") as f:
     user_data = f.read()
 
 key_name = "my-key-pair"
-amzn_linux = ec2.MachineImage.latest_amazon_linux(
-    generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
+amzn_linux = ec2.MachineImage.latest_amazon_linux2(
     edition=ec2.AmazonLinuxEdition.STANDARD,
     virtualization=ec2.AmazonLinuxVirt.HVM,
     storage=ec2.AmazonLinuxStorage.GENERAL_PURPOSE

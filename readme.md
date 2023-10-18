@@ -22,7 +22,8 @@ cdk deploy
 ```
 
 Here are the resource created:
-* One internet gateway, 3 NAT gateways, one in each in public subnet.
+
+* One internet gateway, 3 NAT gateways, one in each in public subnet. Each NAT gateway has a Elastic Network Interface with public and private IP addresses.
 * 3 route tables, one in each public subnet and one in each private subnet
 * 3 route tables for the private subnet, that have egress route to NAT
 * Security groups
@@ -36,13 +37,24 @@ Here are the resource created:
 
 #### Disaster recovery
 
-For Availability zone failure, the current topology guaranty services availability. For region recovery, there is nothing in this stack that will help.
+For one Availability Zone failure, the current topology guaranty services availability. For region recovery, there is nothing in this stack that will help.
 
 ### Basic EC2 stack
 
-The second stack is to get some back end systems for testing resiliency. The basic approach is to use an application that returns the AZ.
+To test resiliency a second stack is to get some back end systems deployed in private subnet. 
+
+
+![](./docs/diagrams/nginx-app-alb.drawio.svg)
 
 * The security defines ingress rule for CIDR of the VPC.
+
+#### What supports HA in this stack
+
+Same as above the 3 AZ helps to support one AZ failure, and auto scaling group help to scale EC2 resources in each AZ.
+
+#### Disaster recovery
+
+In case of region failures, the same stacks are applied in another region. Route 53 DNS name need to be updated to go to the DR region.
 
 ## Body of knowledge
 
