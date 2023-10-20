@@ -26,10 +26,14 @@ class NetworkingStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
        
-        self.vpc = self.lookup_vpc(vpc_name)
-        if self.vpc == None:
+        search = self.lookup_vpc(vpc_name)
+        if search == None:
             self.vpc=self.create_vpc(vpc_name)
-        self.add_security_groups(self.vpc)
+            self.add_security_groups(self.vpc)
+        else:
+            print("found vpc")
+            self.vpc=ec2.Vpc.from_lookup(self, "lookup", vpc_name=vpc_name, is_default=False)
+        print(self.vpc.vcp_id)
         CfnOutput(self,"VPC", value=self.vpc.vpc_id, export_name="vpc")
 
     
@@ -43,6 +47,7 @@ class NetworkingStack(Stack):
                             ]
                         }]
                     )
+        print(response)
         if len(response['Vpcs']) > 0:
             vpc=response['Vpcs'][0]
         else:

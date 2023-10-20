@@ -2,14 +2,16 @@ from aws_cdk import (
     # Duration,
     Stack,
     aws_ec2 as ec2,
-    CfnOutput
+    CfnOutput,
+    aws_autoscaling as autoscaling,
+    aws_elasticloadbalancingv2 as elbv2,
 )
 from constructs import Construct
 
 with open("./backend/user_data/user_data.sh") as f:
     user_data = f.read()
 
-key_name = "my-key-pair"
+key_name = "my-ec2-key-pair"
 amzn_linux = ec2.MachineImage.latest_amazon_linux2(
     edition=ec2.AmazonLinuxEdition.STANDARD,
     virtualization=ec2.AmazonLinuxVirt.HVM,
@@ -33,14 +35,32 @@ class BackendStack(Stack):
 
         self.ec2_security_group.add_ingress_rule(ec2.Peer.ipv4(cdir), ec2.Port.tcp(22), "allow ssh access from the VPC")
         self.ec2_security_group.add_ingress_rule(ec2.Peer.ipv4(cdir), ec2.Port.tcp(80), "allow HTTP access from the VPC")
+        asg=autoscaling.AutoScalingGroup(self, "ASG",
+            vpc=vpc,
+            instance_type=ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE2, ec2.InstanceSize.MICRO),
+            machine_image=amzn_linux,
+            key_name=key_name,
+            security_group=self.ec2_security_group,
+            user_data=ec2.UserData.custom(user_data),
+            min_capacity=1,
+            max_capacity=2,
+            desired_capacity=2,
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
+            # availability_zones=["us-west-2a", "us-west-2b"]
+        )
 
-        self.instance = ec2.Instance(self, "myHttpdEC2",
-                                     instance_type=ec2.InstanceType("t2.micro"),
-                                     instance_name="mySimpleHTTPserver",
-                                     machine_image=amzn_linux,
-                                     vpc=vpc,
-                                     key_name=key_name,
-                                     vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
-                                     security_group=self.ec2_security_group,
-                                     user_data=ec2.UserData.custom(user_data),
-                                     )
+        lb = elbv2.ApplicationLoadBalancer(self, "ALB",
+                vpc=vpc,
+                internet_facing=True
+            )
+        listener = lb.add_listener("Listener",
+                    port=80,
+                    open=True
+                    )
+
+        # Create an AutoScaling group and add it as a load balancing
+        # target to the listener.
+        listener.add_targets("ApplicationFleet",
+            port=80,
+            targets=[asg]
+        )
